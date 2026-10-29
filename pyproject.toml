@@ -41,6 +41,11 @@ dev = [
 bedrock = [
     "langchain-aws>=1.7.9",
 ]
+# Custom MCP servers as analyst tools (mcp_servers config). Optional so the
+# core install stays lean: pip install "tradingagents[mcp]".
+mcp = [
+    "langchain-mcp-adapters>=0.3.2",
+]
 
 [project.scripts]
 tradingagents = "cli.main:app"

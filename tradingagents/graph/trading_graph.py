@@ -9,6 +9,7 @@ from typing import Any
 
 import tradingagents
 from tradingagents.agents.context import build_instrument_context, resolve_instrument_identity
+from tradingagents.agents.mcp_tools import load_mcp_tools
 from tradingagents.agents.rating import run_rating
 from tradingagents.dataflows.config import run_config, run_config_context, set_config
 from tradingagents.dataflows.date_window import get_current_date, is_historical
@@ -98,6 +99,10 @@ class TradingAgentsGraph:
             self.deep_thinking_llm,
             self.conditional_logic,
             max_tool_rounds,
+            # Tools from configured MCP servers, alongside each analyst's own.
+            # Loaded here so a bad server or a shadowed name fails the run at
+            # startup, before any analysis is spent.
+            extra_analyst_tools=load_mcp_tools(self.config),
         )
 
         self.propagator = Propagator(

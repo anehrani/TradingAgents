@@ -1,3 +1,4 @@
+import json
 import os
 
 _TRADINGAGENTS_HOME = os.path.join(os.path.expanduser("~"), ".tradingagents")
@@ -25,7 +26,10 @@ _ENV_OVERRIDES = {
     "TRADINGAGENTS_TEMPERATURE":          "temperature",
     "TRADINGAGENTS_LLM_MAX_RETRIES":      "llm_max_retries",
     "TRADINGAGENTS_MAX_TOKENS":           "max_tokens",
-    # Provider-specific reasoning/thinking knobs (None = each provider's own
+    # Structured values arrive as JSON, e.g. TRADINGAGENTS_MCP_SERVERS='{"mydata":
+    # {"command": "python", "args": ["my_server.py"]}}'.
+    "TRADINGAGENTS_MCP_SERVERS":          "mcp_servers",
+      # Provider-specific reasoning/thinking knobs (None = each provider's own
     # default). Settable here for non-interactive runs; the CLI also offers an
     # interactive choice, which is skipped when the matching var is set.
     "TRADINGAGENTS_GOOGLE_THINKING_LEVEL":   "google_thinking_level",
@@ -58,6 +62,13 @@ def _coerce(value: str, reference):
         return int(value)
     if isinstance(reference, float):
         return float(value)
+    if isinstance(reference, (dict, list)):
+        # A structured config value takes its override as JSON, so a whole
+        # map/list passes through one env var; malformed JSON fails loudly.
+        try:
+            return json.loads(value)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"expected JSON of type {type(reference).__name__}, got {value!r}") from exc
     return value
 
 
@@ -169,6 +180,15 @@ def build_default_config() -> dict:
         "tool_vendors": {
             # Example: "get_stock_data": "alpha_vantage",  # Override category default
         },
+        # Optional MCP (Model Context Protocol) servers whose tools join every
+        # tool-using analyst's toolset, alongside the built-ins above. Each
+        # nickname maps to a local stdio server — command, optional args, env
+        # and cwd — and the loaders refuse a run whose server's tool shadows a
+        # built-in name. URLs (http://, https://, file://) must be wrapped with
+        # a launcher binary (a URL is not a stdio command). Example:
+        # "mcp_servers": {"mydata": {"command": "python", "args": ["my_server.py"], "env": {}}},
+        # See tradingagents/agents/mcp_tools.py. Needs `langchain-mcp-adapters`.
+        "mcp_servers": {},
         # Benchmark for alpha calculation in the reflection layer.
         # ``benchmark_ticker`` (when set) overrides the suffix map for all
         # tickers; leave it None to use ``benchmark_map`` for auto-detection

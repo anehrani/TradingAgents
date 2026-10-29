@@ -50,8 +50,12 @@ def _tools_or_done(state) -> str:
     return "tools" if state["messages"][-1].tool_calls else END
 
 
-def _analyst_graph(spec, agent, max_tool_rounds: int):
+def _analyst_graph(spec, agent, max_tool_rounds: int, extra_tools=()):
     """One analyst as a graph of its own: the model and its tools, on a private message history.
+
+    ``extra_tools`` (tools from configured MCP servers) join the spec's tools:
+    both the tool node and the agent offer the same set, so a call to one is
+    always executable.
 
     It returns only its report, so analysts running side by side never write the
     same key, and its tool calls never reach the other analysts' messages. After
@@ -82,7 +86,7 @@ def _analyst_graph(spec, agent, max_tool_rounds: int):
                        spec.agent_node, max_tool_rounds, repeated)
         return agent({**state, "messages": [*state["messages"], HumanMessage(WRAP_UP)]})
 
-    graph.add_node("tools", ToolNode(list(spec.tools)))
+    graph.add_node("tools", ToolNode([*spec.tools, *extra_tools]))
     graph.add_node("wrap_up", wrap_up)
     graph.add_conditional_edges("agent", _tools_or_done, ["tools", END])
     graph.add_conditional_edges("tools", more_or_wrap_up, ["agent", "wrap_up"])
@@ -99,12 +103,15 @@ class GraphSetup:
         deep_thinking_llm: Any,
         conditional_logic: ConditionalLogic,
         max_tool_rounds: int,
+        extra_analyst_tools: tuple = (),
     ):
         """Initialize with required components."""
         self.quick_thinking_llm = quick_thinking_llm
         self.deep_thinking_llm = deep_thinking_llm
         self.conditional_logic = conditional_logic
         self.max_tool_rounds = max_tool_rounds
+        # Tools from configured MCP servers, offered to every tool-using analyst.
+        self.extra_analyst_tools = tuple(extra_analyst_tools)
 
     def setup_graph(
         self, selected_analysts=("market", "social", "news", "fundamentals"), memory_node=None
@@ -123,10 +130,13 @@ class GraphSetup:
         plan = build_analyst_execution_plan(selected_analysts)
 
         analyst_factories = {
-            "market": lambda: create_market_analyst(self.quick_thinking_llm),
+            "market": lambda: create_market_analyst(self.quick_thinking_llm,
+                                                    extra_tools=self.extra_analyst_tools),
             "social": lambda: create_sentiment_analyst(self.quick_thinking_llm),
-            "news": lambda: create_news_analyst(self.quick_thinking_llm),
-            "fundamentals": lambda: create_fundamentals_analyst(self.quick_thinking_llm),
+            "news": lambda: create_news_analyst(self.quick_thinking_llm,
+                                                extra_tools=self.extra_analyst_tools),
+            "fundamentals": lambda: create_fundamentals_analyst(self.quick_thinking_llm,
+                                                                 extra_tools=self.extra_analyst_tools),
         }
 
         bull_researcher_node = create_bull_researcher(self.quick_thinking_llm)
@@ -142,8 +152,11 @@ class GraphSetup:
         workflow = StateGraph(AgentState)
 
         for spec in plan.specs:
-            workflow.add_node(spec.agent_node,
-                              _analyst_graph(spec, analyst_factories[spec.key](), self.max_tool_rounds))
+            workflow.add_node(
+                spec.agent_node,
+                _analyst_graph(spec, analyst_factories[spec.key](), self.max_tool_rounds,
+                               extra_tools=self.extra_analyst_tools),
+            )
 
         workflow.add_node("Bull Researcher", bull_researcher_node)
         workflow.add_node("Bear Researcher", bear_researcher_node)
