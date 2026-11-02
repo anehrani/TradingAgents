@@ -50,6 +50,7 @@ def _header(ticker: str, final_state: dict, settings: dict | None) -> str:
 _SECTIONS = (
     ("I. Analyst Team Reports", "1_analysts", (
         ("Market Analyst", "market.md", ("market_report",)),
+        ("Options Analyst", "options.md", ("options_report",)),
         ("Sentiment Analyst", "sentiment.md", ("sentiment_report",)),
         ("News Analyst", "news.md", ("news_report",)),
         ("Fundamentals Analyst", "fundamentals.md", ("fundamentals_report",)),

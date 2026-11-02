@@ -106,7 +106,7 @@ def normalize_symbol(raw: str) -> str:
     Resolution order (first match wins):
       1. Explicit alias table (metals, energy, index CFDs).
       2. Crypto rule: a known crypto base quoted in USD/USDT/USDC (dashed or
-         not) -> ``BASE-USD``.
+         not, or even a bare base like ``BTC``) -> ``BASE-USD``.
       3. Forex rule: six letters that are two ISO currency codes -> ``PAIR=X``.
       4. HK rule: a numeric ``.HK`` code -> Yahoo's 4-digit padding
          (``09992.HK`` -> ``9992.HK``, ``700.HK`` -> ``0700.HK``).
@@ -128,8 +128,10 @@ def normalize_symbol(raw: str) -> str:
     crypto = _normalize_crypto(s)
     if s in _ALIASES:
         canonical = _ALIASES[s]
-    elif crypto is not None:
-        canonical = crypto
+    elif crypto is not None or s in _CRYPTO_BASES:
+        # A quoted pair (BTCUSD, BTC-USDT) or a bare known base ("BTC") both
+        # mean Yahoo's ``BASE-USD`` symbol.
+        canonical = crypto or f"{s}-USD"
     elif len(s) == 6 and s[:3] in _FOREX_CURRENCIES and s[3:] in _FOREX_CURRENCIES:
         canonical = f"{s}=X"
     elif hk := _HK_CODE.match(s):

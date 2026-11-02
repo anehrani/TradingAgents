@@ -18,6 +18,7 @@ class Propagator:
         past_context: str = "",
         instrument_context: str = "",
         portfolio_context: str = "",
+        question: str = "",
     ) -> dict[str, Any]:
         """Create the initial state for the agent graph.
 
@@ -26,9 +27,20 @@ class Propagator:
         ``TradingAgentsGraph.resolve_instrument_context``). When empty, agents
         fall back to ticker-only context via
         ``get_instrument_context_from_state``.
+
+        ``question`` is an optional user question (an options question, a
+        focus warning...). It becomes part of the first human message, which
+        every analyst reads in its opening turn; empty keeps the plain
+        ticker-only message.
         """
+        opening = company_name
+        if question:
+            opening = (
+                f"{company_name}\n\n"
+                f"The user's question to answer in this run's reports: {question}"
+            )
         return {
-            "messages": [("human", company_name)],
+            "messages": [("human", opening)],
             "company_of_interest": company_name,
             "asset_type": asset_type,
             "instrument_context": instrument_context,
@@ -62,6 +74,7 @@ class Propagator:
             "fundamentals_report": "",
             "sentiment_report": "",
             "news_report": "",
+            "options_report": "",
         }
 
     def get_graph_args(self, callbacks: list | None = None) -> dict[str, Any]:

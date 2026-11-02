@@ -26,6 +26,10 @@ _ENV_OVERRIDES = {
     "TRADINGAGENTS_TEMPERATURE":          "temperature",
     "TRADINGAGENTS_LLM_MAX_RETRIES":      "llm_max_retries",
     "TRADINGAGENTS_MAX_TOKENS":           "max_tokens",
+    # Force which underlying's option chains serve an asset: a Yahoo-listed
+    # proxy like GLD for gold or IBIT for BTC, overriding the built-in proxy
+    # tables. Unset resolves through the data layer's own tables.
+    "TRADINGAGENTS_OPTION_UNDERLYING":    "option_underlying",
     # Structured values arrive as JSON, e.g. TRADINGAGENTS_MCP_SERVERS='{"mydata":
     # {"command": "python", "args": ["my_server.py"]}}'.
     "TRADINGAGENTS_MCP_SERVERS":          "mcp_servers",
@@ -166,6 +170,11 @@ def build_default_config() -> dict:
         # The configured value is the exact vendor chain — requests are NOT silently
         # routed to vendors you didn't choose. For ordered fallback, list several,
         # e.g. "yfinance,alpha_vantage". "default" uses all available vendors.
+        # Option-market data. ``option_underlying`` forces the underlying whose
+        # listed option chains answer the option tools (e.g. "GLD" for gold,
+        # "IBIT" for BTC); when None, the option vendor resolves through its
+        # own proxy tables (spot crypto, index and futures underlyings).
+        "option_underlying": None,
         "data_vendors": {
             "core_stock_apis": "yfinance",       # Options: alpha_vantage, yfinance
             "technical_indicators": "yfinance",  # Options: alpha_vantage, yfinance

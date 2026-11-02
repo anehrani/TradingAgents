@@ -265,6 +265,91 @@ def get_macro_indicators(
 
 
 @tool
+def get_option_expirations(
+    symbol: Annotated[str, InjectedState("company_of_interest")],
+    curr_date: Annotated[str, "The current trading date you are trading on, YYYY-mm-dd"],
+    trade_date: Annotated[str, InjectedState("trade_date")] = "",
+) -> str:
+    """
+    List the option expiration dates that have live market data for the
+    instrument under analysis, with its current spot price and the days-to-
+    expiry for each date. Yahoo lists option chains only as a live snapshot,
+    so a run dated in the past receives a hold notice instead of chain data.
+    An instrument without its own chains (spot crypto, index and futures
+    underlyings) is answered through a listed proxy underlying, named in the
+    output (IBIT for BTC-USD, GLD for gold, SPY for ^GSPC). Uses the
+    configured option_data vendor.
+
+    Args:
+        curr_date (str): The current trading date you are trading on, YYYY-mm-dd
+
+    Returns:
+        str: A markdown report of spot, proxy note if used, and the expiration table
+    """
+    return route_to_vendor("get_option_expirations", symbol, as_of(curr_date, trade_date))
+
+
+@tool
+def get_option_term_structure(
+    symbol: Annotated[str, InjectedState("company_of_interest")],
+    curr_date: Annotated[str, "The current trading date you are trading on, YYYY-mm-dd"],
+    max_expiries: Annotated[int, "How many nearest expirations to summarize (default 8)"] = 8,
+    trade_date: Annotated[str, InjectedState("trade_date")] = "",
+) -> str:
+    """
+    Retrieve the cross-expiry option market for the instrument under analysis:
+    per expiration — put/call ratios by volume and open interest, at-the-money
+    IV, the 25-delta put/call skew, the max-pain strike, and an approximate
+    net gamma exposure. The broad search across the option market; call this
+    before pulling individual chains, then use get_option_chain on the one or
+    two expiries that matter to the question. Uses the configured
+    option_data vendor.
+
+    Args:
+        curr_date (str): The current trading date you are trading on, YYYY-mm-dd
+        max_expiries (int): Nearest expiries to summarize (default 8; raise only
+            with a reason, each expiry is one more market request)
+
+    Returns:
+        str: A formatted markdown report of per-expiry option positioning
+    """
+    return route_to_vendor("get_option_term_structure", symbol, as_of(curr_date, trade_date), max_expiries)
+
+
+@tool
+def get_option_chain(
+    symbol: Annotated[str, InjectedState("company_of_interest")],
+    expiry: Annotated[str, "The expiration to read, exactly as listed by get_option_expirations, YYYY-mm-dd"],
+    curr_date: Annotated[str, "The current trading date you are trading on, YYYY-mm-dd"],
+    side: Annotated[str, "'both' (default), 'calls', or 'puts'"] = "both",
+    moneyness: Annotated[str, "Row filter: 'all' (default), 'itm', 'atm', or 'otm'"] = "all",
+    trade_date: Annotated[str, InjectedState("trade_date")] = "",
+) -> str:
+    """
+    Retrieve one expiration's full option chain for the instrument under
+    analysis: every listed strike for calls and puts, each tagged ITM / ATM /
+    OTM against the current spot, with implied volatility, volume, open
+    interest, bid/ask, last price and an approximate delta, plus the
+    per-expiry headline readings (ATM IV, 25-delta skew, put/call ratios,
+    max pain, net gamma exposure, highest-open-interest strikes). Prefer
+    recent expiries and narrow far ones with the side/moneyness filters.
+    Yahoo lists the live chain only, so a past-dated run receives a hold
+    notice. Uses the configured option_data vendor.
+
+    Args:
+        expiry (str): The expiration to read, YYYY-mm-dd, exactly as get_option_expirations lists it
+        side (str): 'both' | 'calls' | 'puts'
+        moneyness (str): 'all' | 'itm' | 'atm' | 'otm'
+
+    Returns:
+        str: A formatted markdown report of the chain with its landmark readings
+    """
+    return route_to_vendor(
+        "get_option_chain", symbol, expiry, as_of(curr_date, trade_date), side, moneyness,
+    )
+
+
+@tool
 def get_prediction_markets(
     topic: Annotated[
         str,

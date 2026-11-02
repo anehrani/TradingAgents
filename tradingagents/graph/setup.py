@@ -15,6 +15,7 @@ from tradingagents.agents import (
     create_market_analyst,
     create_neutral_debator,
     create_news_analyst,
+    create_options_analyst,
     create_portfolio_manager,
     create_research_manager,
     create_sentiment_analyst,
@@ -124,6 +125,7 @@ class GraphSetup:
                 - "social": Sentiment analyst
                 - "news": News analyst
                 - "fundamentals": Fundamentals analyst
+                - "options": Options analyst
             memory_node: Node that settles past decisions and returns the run's
                 ``past_context``. It runs alongside the analysts.
         """
@@ -137,6 +139,8 @@ class GraphSetup:
                                                 extra_tools=self.extra_analyst_tools),
             "fundamentals": lambda: create_fundamentals_analyst(self.quick_thinking_llm,
                                                                  extra_tools=self.extra_analyst_tools),
+            "options": lambda: create_options_analyst(self.quick_thinking_llm,
+                                                      extra_tools=self.extra_analyst_tools),
         }
 
         bull_researcher_node = create_bull_researcher(self.quick_thinking_llm)

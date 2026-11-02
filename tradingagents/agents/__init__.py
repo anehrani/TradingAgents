@@ -1,6 +1,7 @@
 from .analysts.fundamentals_analyst import create_fundamentals_analyst
 from .analysts.market_analyst import create_market_analyst
 from .analysts.news_analyst import create_news_analyst
+from .analysts.options_analyst import create_options_analyst
 from .analysts.sentiment_analyst import create_sentiment_analyst
 from .managers.portfolio_manager import create_portfolio_manager
 from .managers.research_manager import create_research_manager
@@ -21,6 +22,7 @@ __all__ = [
     "create_research_manager",
     "create_fundamentals_analyst",
     "create_market_analyst",
+    "create_options_analyst",
     "create_neutral_debator",
     "create_news_analyst",
     "create_aggressive_debator",
